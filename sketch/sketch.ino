@@ -7,7 +7,7 @@
 
 // config ///////////////////////////////////////////////////////////////////
 
-int LABNUM =  2; // which lab exercise number are we doing?
+int LABNUM =  3; // which lab exercise number are we doing?
 int firmwareVersion = 4; // used to check for updates, see Ex10
 
 // arduino-land entry points ////////////////////////////////////////////////
@@ -17,7 +17,7 @@ void setup() {
   switch(LABNUM) {
     case  1: setup01(); break;
     case  2: setup02(); break;
-    // case  3: setup03(); break;
+    case  3: setup03(); break;
     // case  4: setup04(); break;
     // case  5: setup05(); break;
     // case  6: setup06(); break;
@@ -36,7 +36,7 @@ void loop() {
   switch(LABNUM) {
     case  1: loop01(); break;
     case  2: loop02(); break;
-    // case  3: loop03(); break;
+    case  3: loop03(); break;
     // case  4: loop04(); break;
     // case  5: loop05(); break;
     // case  6: loop06(); break;
