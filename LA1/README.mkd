@@ -85,6 +85,10 @@ If the update is successful, **updatedSuccLed** will be lit, and the device will
 
 If at any point the update fails, the device will return to its rest state and perform an OTA check again on the next boot.
 
+## Video
+
+For a video showing the above in action, see https://youtu.be/B98yMzmTWXs
+
 ## Testing
 I adopted a TDD approach to my development. When writing each function, I thought carefully about the various use cases it may have and how I could account for them. I would then run the device and trigger all the edge cases I could thing of, noting how the device responded, before going back to make my solution more robust. In particular, ensuring the LEDs lit up at the correct stages of provisioning and updating was the most difficult.
 

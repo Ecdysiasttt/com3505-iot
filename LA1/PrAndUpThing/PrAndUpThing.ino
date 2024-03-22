@@ -10,7 +10,7 @@ String apSSID;
 #define FIRMWARE_SERVER_IP_ADDR "10.213.65.18"    // my desktop's IP address
 #define FIRMWARE_SERVER_PORT    "8000"
 
-int firmwareVersion = 10; // used to check for updates
+int firmwareVersion = 12; // used to check for updates
 
 void setup() {
   Serial.begin(115200);
