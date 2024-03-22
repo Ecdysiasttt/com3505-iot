@@ -10,7 +10,7 @@ String apSSID;
 #define FIRMWARE_SERVER_IP_ADDR "10.213.65.18"    // my desktop's IP address
 #define FIRMWARE_SERVER_PORT    "8000"
 
-int firmwareVersion = 5; // used to check for updates
+int firmwareVersion = 10; // used to check for updates
 
 void setup() {
   Serial.begin(115200);
@@ -34,38 +34,32 @@ void setup() {
 
   // attempt WiFi connection if previously established
   WiFi.begin();
-  Serial.print("Attempting to connect to WiFi...");
   activateLED(connWifiLed);
   
-  // makes 10 attempts
-  uint16_t connectionTries = 0;
-  while(WiFi.status() != WL_CONNECTED && connectionTries < 50) {
-    if (connectionTries % 5 == 0)
-      Serial.print(".");
-    connectionTries++;
-    delay(100);
-  }
+  attemptWifiConnect();
 
   if (WiFi.status() == WL_CONNECTED) {
     // successful connection, will now check for OTA update
     // most of the following is lightly adapted from Ex10
-    Serial.printf("\nConnection to %s successful!\n\n", WiFi.SSID());
-    activateLED(wifiEnabledLed);
+    
     delay(500);
+
+    Serial.println("Checking for available updates...");
+    activateLED(otaCheckLed);
 
     HTTPClient http;
     int respCode;
     int highestAvailableVersion = -1;
 
-    Serial.println("Checking for available updates...");
-    activateLED(otaCheckLed);
-
     // read the version file from the cloud
     respCode = doCloudGet(&http, "version.txt");
     if(respCode > 0) // check response code (-ve on failure)
       highestAvailableVersion = atoi(http.getString().c_str());
-    else
+    else {
       Serial.printf("Couldn't get version! rtn code: %d\n", respCode);
+      activateLED(otaCheckLed);
+    }
+
     http.end(); // free resources
 
     // do we know the latest version, and does the firmware need updating?
@@ -107,14 +101,15 @@ void setup() {
       Update.writeStream(stream);
       if(Update.end()) {
         Serial.printf("Update complete! Now finishing...\n");
-        activateLED(updatedSuccLed);
         Serial.flush();
         if(Update.isFinished()) {
           Serial.printf("Update successfully finished! Rebooting...\n\n");
+          activateLED(updatedSuccLed);
           delay(500);
           ESP.restart();
         } else {
           Serial.printf("Update didn't finish correctly...\n");
+          activateLED(wifiEnabledLed);
           Serial.flush();
         }
       } else {
@@ -129,13 +124,17 @@ void setup() {
   }
   else {
     // if autoconnect failed, disconnect to prevent weird wifi side-effects
-    Serial.print("\nConnection failed.\n");
     WiFi.disconnect();
-    activateLED(wifiWaitLed);
   }
 }
 
 void loop() {
+  // if connection drops, will attempt to reconnect
+  if (isConnected && WiFi.status() != WL_CONNECTED){
+    Serial.println("WiFi connection lost...");
+    Serial.println("Attempting to reestablish...");
+    attemptWifiConnect();
+  }
   webServer.handleClient(); // serve pending web requests every loop
 }
 
@@ -163,7 +162,7 @@ void initWebServer() {
   activateLED(startServerLed);
 
   // register callbacks to handle different paths
-  webServer.on("/", rootPage);              // slash
+  webServer.on("/", rootPage);                // slash
   webServer.on("/wifi", handleWifi);          // page for choosing an AP
   webServer.on("/wifichz", handleWifichz);    // landing page for AP form submit
   webServer.on("/status", handleStatus);      // status check, e.g. IP address

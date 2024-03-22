@@ -14,6 +14,9 @@ extern String apSSID;           // SSID of the AP
 void accessPointForm(String& f);
 String ip2string(IPAddress address);
 
+bool isConnecting = false;
+bool isConnected = false;
+
 // define LED pins and give names for improved readability
 int ledPins[8] = {5, 6, 9, 10, 11, 12, 18, 17};
 const int startAPLed = ledPins[0];      // - starting AP
@@ -31,7 +34,8 @@ void turnOffAllLEDs() {
   }
 }
 
-// enable target LED and disable rest
+// enable target LED and disable rest. a short delay was added to
+// ensure LEDs for short processes (i.e. startAP) are still visible
 void activateLED(int targetLed) {
   turnOffAllLEDs();
   digitalWrite(targetLed, HIGH);
@@ -57,6 +61,33 @@ void getHtml( // turn array of strings & set of replacements into a String
       html.concat(repls[j++].replacement);
     else
       html.concat(boiler[i]);
+  }
+}
+
+// will attempt to connect to WiFi and set correct LED status
+void attemptWifiConnect() {
+  Serial.print("Attempting to connect to WiFi...");
+
+  activateLED(connWifiLed);
+
+  // makes 10 attempts
+  uint16_t connectionTries = 0;
+  while(WiFi.status() != WL_CONNECTED && connectionTries < 50) {
+    if (connectionTries % 5 == 0)
+      Serial.print(".");
+    connectionTries++;
+    delay(100);
+  }
+
+  // isConnected is used to check for WiFi drop in loop()
+  if (WiFi.status() == WL_CONNECTED) {
+    isConnected = true;
+    Serial.printf("\n\nConnection to %s successful!\n\n", WiFi.SSID());
+    activateLED(wifiEnabledLed);
+  } else {
+    isConnected = false;
+    Serial.print("\nConnection failed.\n");
+    activateLED(wifiWaitLed);
   }
 }
 
@@ -120,7 +151,6 @@ void handleWifi() {
 //  - activating LEDs at correct points to meet LA1 rubric
 void handleWifichz() {
   Serial.println("Serving /wifichz...");
-  activateLED(connWifiLed);
 
   String title = "<h2>Joining wifi network...</h2>";
   String message = "<p>Check <a href='/status'>wifi status</a>.</p>";
@@ -143,24 +173,16 @@ void handleWifichz() {
     key.toCharArray(keychars, key.length()+1);
     WiFi.begin(ssidchars, keychars);
 
-    uint16_t connectionTries = 0; 
-    while(WiFi.status() != WL_CONNECTED && connectionTries < 20) {
-      if (connectionTries % 5 == 0)
-        Serial.print(".");
-      connectionTries++;
-      delay(100);
-    }
+    attemptWifiConnect();
 
     if (WiFi.status() == WL_CONNECTED) {
       title = "<h2>Successfully connected!</h2>";
-      activateLED(wifiEnabledLed);
     }
     else {
       title = "<h2>Connection failed</h2>";
       message = "<p><a href='/wifi'>Check available networks</a> and try again.</p>";
 
       WiFi.disconnect(); // discconect from wifi to stop weird connection issues
-      activateLED(wifiWaitLed);
     }
   }
 
@@ -255,8 +277,8 @@ void accessPointForm(String& f) { // utility to create a form for choosing AP
       f.concat("<br/>\n");
       checked = "";
     }
-    f += "<br/>Pass key: <input type='textarea' name='key'><br/><br/> ";
-    f += "<input type='submit' value='Submit'></form></p>";
+      f += "<br/>Pass key: <input type='textarea' name='key'><br/><br/> ";
+      f += "<input type='submit' value='Submit'></form></p>";
   }
 }
 
