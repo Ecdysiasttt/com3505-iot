@@ -53,21 +53,22 @@ Setup is now complete. Now the device will wait for the user to connect to its A
 **Web Server:**
 When a user connects to the access point and navigates to http://192.168.4.1, they are greeted with the following landing page:
 
-![Screenshot of landing page](photos/rootPage.png)
+[<img src="photos/rootPage.png" width="200"/>](photos/rootPage.png)
 
 From here they can navigate to "/wifi" or "/status". Navigating to "/wifi" will show the following:
 
-![Screenshot of WiFi selection page](photos/wifiSelect.png)
+[<img src="photos/wifiSelect.png" width="200"/>](photos/wifiSelect.png)
 
 Here the user is shown a list of available access points and a text field to input a password (if necessary). Selecting a network will begin the connection attempt and activate **connWifiLed**. As per the autoconnect attempts on boot, the device will make 10 attempts before timing out. The user will be sent to "/wifichz", with the contents varying depending on the result of the connection attempts: If successful, the user will be invited to check "/status" and **wifiEnabledLed** will be lit. If unsuccessful, the user will be informed of the failure and be invited to return to "/wifi" and try again, with **wifiWaitLed** being lit.
 
-![Screenshot of successful WiFi connection](photos/successConnection.png)
+[<img src="photos/successConnection.png" width="200"/>](photos/successConnection.png)
 
-![Screenshot of unsuccessful WiFi connection](photos/failedConnection.png)
+[<img src="photos/failedConnection.png" width="200"/>](photos/failedConnection.png)
+
 
 Visiting "/status" will show some useful information to the user.
 
-![Screenshot of WiFi status page](photos/wifiStatus.png)
+[<img src="photos/wifiStatus.png" width="200"/>](photos/wifiStatus.png)
 
 Once a successful connection has been established, and the green **wifiEnabledLed** is lit, the user can reboot the device in order to check for an OTA update.
 
