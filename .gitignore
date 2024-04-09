@@ -5,3 +5,5 @@ local-sdks
 build
 logs
 sdkconfig
+LA2/model
+LA2/venv
