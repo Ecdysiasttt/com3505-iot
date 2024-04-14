@@ -1,0 +1,66 @@
+
+Hello Harry Scutt!
+
+My records state that you're not in a pair.
+
+(If this is incorrect please get in touch!)
+
+We've reviewed your COM3505 assessment 1 from
+https://gitlab.com/hasscutt1/com3505-student-2024
+
+Congratulations, you've passed!
+
+As you know, we don't provide marks for this part of the course
+assessment, but if we _were_ doing so, we would estimate your work to
+be somewhere in the 1st quartile.
+
+That's excellent work, well done!
+
+Some feedback:
+
+Excellent work, well done!
+
+Your project submission for the IoT device focusing on network
+provisioning and over-the-air updates is comprehensive and
+well-structured. You've effectively utilized the ESP32's capabilities
+to demonstrate both the provisioning process and how OTA updates can
+be managed, aligning well with the assignment's rubric.
+
+From your documentation, it's evident that you've put significant
+effort into detailing each stage of operation with corresponding LED
+indicators, which is crucial for understanding the state of the device
+without needing a serial monitor. This approach is particularly useful
+in real-world applications where immediate visual feedback is
+necessary. The choice of using different colors to indicate various
+states (yellow for processing, green for success, and red for critical
+updates) is a thoughtful touch enhancing the user interaction
+experience.
+
+The hardware setup section is well-documented with clear images and
+descriptions of the breadboard configuration, which meets the rubric's
+requirements for hardware documentation. Moreover, the addition of a
+video link demonstrating the functionality is a commendable way to
+provide a real-time illustration of how the device performs, which
+supports both technical and operational documentation criteria.
+
+Your firmware implementation is robust, with a clear separation of
+concerns shown by the division of code into different functions and
+modules. The use of a web server for network configuration and the
+handling of OTA updates through HTTP requests are well-executed.
+
+However, ensuring that you handle potential errors more
+comprehensively during the OTA update process could make the system
+more resilient, such as more detailed handling when the .bin file
+retrieval fails or when the update size is improbable.
+
+Lastly, the testing section demonstrates a thorough approach to
+ensuring reliability and functionality under different scenarios,
+which is crucial for IoT devices. This not only shows your
+understanding of the system but also your ability to foresee and
+mitigate practical issues that might arise.
+
+Overall, your project meets the rubric's requirements effectively with
+comprehensive documentation, a clear demonstration of technical
+capabilities, and thoughtful testing and presentation. Great job on
+creating a demonstrative IoT device that clearly aligns with the
+educational goals of the course.
