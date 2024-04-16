@@ -26,11 +26,12 @@ this:
 - `com3505-student-2024/LA2/README.mkd`
 - `com3505-student-2024/LA2/rubric.mkd` (this file)
 - `com3505-student-2024/LA2/`...other doc files etc....
+- `com3505-student-2024/LA2/platformio.ini` (if using PlatformIO)
 - `com3505-student-2024/LA2/ProjectThing`
 - `com3505-student-2024/LA2/ProjectThing/ProjectThing.ino`
-- (if using PlatformIO: `com3505-student-2024/LA2/platformio.ini`)
 - `com3505-student-2024/LA2/ProjectThing/`...other code files etc....
-- ...etc....
+- ...etc.... (server side code should be included in a subdirectory and
+  clearly linked and explained in your README.mkd)
 
 The project is yours to keep after the course (and may serve as a
 cyber-physical demonstration of your skills and interests for interviews and
@@ -55,18 +56,22 @@ final classification for the course (pass, 3rd, upper or lower 2nd, 1st).
 
 - **Pair working**. If you’re submitting as a pair, please put a file called
   `pair.txt` at the top level of your repo, with the format:
-  - person1@sheffield.ac.uk
-  - person2@sheffield.ac.uk
-  - (where person1 owns the git repository that you want me to mark for your
-    team; the file should be duplicated and identical in both team members'
-    repos)
+```txt
+person1@sheffield.ac.uk
+person2@sheffield.ac.uk
+```
+  (where person1 owns the git repository that you want me to mark for your
+  team; the file should be duplicated and identical in both team members'
+  repos)
 - **Deadline**. Friday 17th May at 12 midday UK time. (At this point a
-  snapshot of your gitlab repository will be taken for marking.)
+  snapshot of your gitlab repository will be taken for marking.) If you are in
+  possession of the appropriate LSP please drop me a brief email detailing any
+  extra time that you may require.
 - **Size**. If you have spent the approximate amount of time we recommend for
   a 10 credit course (around 8 hours per week) on the work so far, you should
   be able to achieve a good solution (including hardware, code and
   documentation) within a similar amount of time (8 hours per week of the
-  project duration), or less.
+  project duration).
 - **Marks**. The assessment is marked out of 100 and contributes a possible
   maximum of 60 to your score for the course. Marks will be allocated for both
   qualitative and quantitative characteristics of hardware, code, and
@@ -87,7 +92,9 @@ final classification for the course (pass, 3rd, upper or lower 2nd, 1st).
   Documentation which is clear, well written and illustrated appropriately
   will score more marks, as will reference to appropriate supporting materials
   (e.g. from the course reading lists). Linking of on-line API reference
-  materials and/or library sources is also a good idea.
+  materials and/or library sources is also a good idea. The documentation is
+  to be written in the README.mkd in Markdown only: .doc or .pdf or etc. is
+  **not** acceptable.
 - **Testing**. Code that "seems to work" is the first step in a
   (non-test-driven!) project; code that has been tested to destruction, fixed
   and tested again, and again, and again, stands a chance of being _reliable_.
