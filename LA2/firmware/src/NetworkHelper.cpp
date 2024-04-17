@@ -12,17 +12,22 @@ void connectToWifi() {
 
   attemptWifiConnect();
 
-  if (WiFi.status() == WL_CONNECTED) {
-    // successful connection, will now check for OTA update
-    // most of the following is lightly adapted from Ex10
-    performOTAUpdate();
-  }
-  else {
-    // if autoconnect failed, disconnect to prevent weird wifi side-effects
+  if (WiFi.status() != WL_CONNECTED) {
     WiFi.disconnect();
     startAP();
     initWebServer();
+    while (WiFi.status() != WL_CONNECTED) {
+      // hold here until connected, handling web requests
+      webServer.handleClient(); // serve pending web requests every loop
+    }
+    // successful connection, will now check for OTA update
+    // most of the following is lightly adapted from Ex10
   }
+  // else {
+  //   // if autoconnect failed, disconnect to prevent weird wifi side-effects
+  // }
+  displayCentredAlertWithSubtext("Connected!", "Continuing setup...");
+  performOTAUpdate();
 }
 
 // will attempt to connect to WiFi and set correct LED status
@@ -147,6 +152,7 @@ void performOTAUpdate() {
 }
 
 void startAP() {
+  displayCentredAlertWithSubtext("WiFi Error", "Connect to Marvin-AP");
   Serial.println("\nStarting AP...");
 
   if(! WiFi.mode(WIFI_AP_STA))
@@ -208,7 +214,7 @@ const char *templatePage[] = {
   "<style>body{background:#FFF; color: #000; font-family: sans-serif;", //  4
   "font-size: 150%;}</style>\n",                                        //  5
   "</head><body>\n",                                                    //  6
-  "<h2>LA1 Access Point Selection</h2>\n",                              //  7
+  "<h2>Marvin config</h2>\n",                              //  7
   "<!-- page payload goes here... -->\n",                               //  8
   "<!-- ...and/or here... -->\n",                                       //  9
   "\n<p><a href='/'>Home</a>&nbsp;&nbsp;&nbsp;</p>\n",                  // 10

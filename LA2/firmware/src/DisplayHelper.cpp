@@ -34,47 +34,19 @@ String location = "Sheffield,GB";
 char weatherDesc[50];
 // char tempDisplay[6];
 
-float coord_lon;
-float coord_lat;
-
 JsonObject weather_0;
 int weather_0_id;
-const char* weather_0_main;
-const char* weather_0_description;
-const char* weather_0_icon;
-
-const char* base;
-
-JsonObject mainBlock;
-float main_temp;
-float main_feels_like;
-float main_temp_min;
-float main_temp_max;
-int main_pressure;
-int main_humidity;
-
-int visibility;
-
-JsonObject wind;
-float wind_speed;
-int wind_deg;
-float wind_gust;
-
-int clouds_all;
-
-long dt;
 
 JsonObject sys;
 int sys_type;
-long sys_id;
-const char* sys_country;
-long sys_sunrise;
-long sys_sunset;
 
-int timezone;
-long id;
+
+const char* weather_0_main;
+const char* weather_0_icon;
+float main_temp;
+const char* sys_country;
+
 const char* name;
-int cod;
 
 ThinkInk_213_Mono_B72 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY);
 
@@ -117,19 +89,6 @@ void displayUpdating() {
   displayCentredAlertWithSubtext("Updating!", "Do not power off...");
 }
 
-// // large block of text
-// display.clearBuffer();
-// testdrawtext("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur adipiscing ante sed nibh tincidunt feugiat. Maecenas enim massa, fringilla sed malesuada et, malesuada sit amet turpis. Sed porttitor neque ut ante pretium vitae malesuada nunc bibendum. Nullam aliquet ultrices massa eu hendrerit. Ut sed nisi lorem. In vestibulum purus a tortor imperdiet posuere. ", COLOR1);
-// display.display();
-
-// void testdrawtext(const char *text, uint16_t color) {
-//   display.setCursor(0, 0);
-//   display.setTextColor(color);
-//   display.setTextWrap(true);
-//   display.print(text);
-// }
-
-
 // default home screen. Displays location, time, and weather
 // performs a full refresh.
 void displayHome(bool fullRefresh) {
@@ -159,12 +118,10 @@ void getWeather() {
   Serial.println("========================");
 
   String serverPath = 
-    "http://api.openweathermap.org/data/2.5/weather?q="
-      + location + "&APPID=" + openWeatherMapApiKey
-      + "&units=metric";    // gets temp in celsius instead of kelvin
+    "http://api.openweathermap.org/data/2.5/weather?q=" + location + "&APPID=" + openWeatherMapApiKey + "&units=metric";    // gets temp in celsius instead of kelvin
 
   jsonResponse = httpGETRequest(serverPath.c_str());
-  // Serial.println(jsonResponse);
+  Serial.println(jsonResponse);
   
   // Serial.println("\n\n\n");
 
@@ -450,44 +407,44 @@ void deserializeWeather(String weatherJson) {
     return;
   }
 
-  coord_lon = doc["coord"]["lon"]; // -1.4659
-  coord_lat = doc["coord"]["lat"]; // 53.383
+  // coord_lon = doc["coord"]["lon"]; // -1.4659
+  // coord_lat = doc["coord"]["lat"]; // 53.383
 
   weather_0 = doc["weather"][0];
-  weather_0_id = weather_0["id"]; // 801
-  weather_0_main = weather_0["main"]; // "Clouds"
-  weather_0_description = weather_0["description"]; // "few clouds"
+  // weather_0_id = weather_0["id"]; // 801
+  weather_0_main = doc["weather"][0]["main"]; // "Clouds"
+  // weather_0_description = weather_0["description"]; // "few clouds"
   weather_0_icon = weather_0["icon"]; // "02d"
 
-  base = doc["base"]; // "stations"
+  // base = doc["base"]; // "stations"
 
-  mainBlock = doc["main"];
-  main_temp = mainBlock["temp"]; // 285.49
-  main_feels_like = mainBlock["feels_like"]; // 284.32
-  main_temp_min = mainBlock["temp_min"]; // 285.22
-  main_temp_max = mainBlock["temp_max"]; // 286.43
-  main_pressure = mainBlock["pressure"]; // 994
-  main_humidity = mainBlock["humidity"]; // 59
+  // mainBlock = doc["main"];
+  // main_temp = mainBlock["temp"]; // 285.49
+  // main_feels_like = mainBlock["feels_like"]; // 284.32
+  // main_temp_min = mainBlock["temp_min"]; // 285.22
+  // main_temp_max = mainBlock["temp_max"]; // 286.43
+  // main_pressure = mainBlock["pressure"]; // 994
+  // main_humidity = mainBlock["humidity"]; // 59
 
-  visibility = doc["visibility"]; // 10000
+  // visibility = doc["visibility"]; // 10000
 
-  wind = doc["wind"];
-  wind_speed = wind["speed"]; // 0.45
-  wind_deg = wind["deg"]; // 68
-  wind_gust = wind["gust"]; // 2.24
-  clouds_all = doc["clouds"]["all"]; // 22
+  // wind = doc["wind"];
+  // wind_speed = wind["speed"]; // 0.45
+  // wind_deg = wind["deg"]; // 68
+  // wind_gust = wind["gust"]; // 2.24
+  // clouds_all = doc["clouds"]["all"]; // 22
 
-  dt = doc["dt"]; // 1711821033
+  // dt = doc["dt"]; // 1711821033
 
   sys = doc["sys"];
-  sys_type = sys["type"]; // 2
-  sys_id = sys["id"]; // 38363
+  // sys_type = sys["type"]; // 2
+  // sys_id = sys["id"]; // 38363
   sys_country = sys["country"]; // "GB"
-  sys_sunrise = sys["sunrise"]; // 1711777392
-  sys_sunset = sys["sunset"]; // 1711823817
+  // sys_sunrise = sys["sunrise"]; // 1711777392
+  // sys_sunset = sys["sunset"]; // 1711823817
 
-  timezone = doc["timezone"]; // 0
-  id = doc["id"]; // 2638077
+  // timezone = doc["timezone"]; // 0
+  // id = doc["id"]; // 2638077
   name = doc["name"]; // "Sheffield"
-  cod = doc["cod"]; // 200
+  // cod = doc["cod"]; // 200
 }

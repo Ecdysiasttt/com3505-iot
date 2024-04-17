@@ -51,12 +51,6 @@ IntentResult IntentProcessor::turnOnDevice(const Intent &intent)
             digitalWrite(dev_pin.second, is_turn_on);
         }
     }
-    // else if (intent.device_name == "matrix") {
-    //   if (is_turn_on)
-    //     // dotstar_wing_on();
-    //   else
-    //     // dotstar_wing_off();
-    // }
     else
     {
         // see if the device name is something we know about
@@ -82,16 +76,6 @@ IntentResult IntentProcessor::life()
     m_speaker->playLife();
     return SILENT_SUCCESS;
 }
-
-// IntentResult IntentProcessor::changeColour(const Intent &intent)
-// {
-//     Serial.printf(
-//       "changeColour: confidence=%.f%%; device_name=%s; trait_value=%s; trait_confidence=%.f%%\n",
-//       100 * intent.intent_confidence, intent.device_name.c_str(),
-//       intent.trait_value.c_str(), 100 * intent.trait_confidence
-//     );
-//     return SUCCESS;
-// }
 
 IntentResult IntentProcessor::processIntent(const Intent &intent)
 {
@@ -125,10 +109,6 @@ IntentResult IntentProcessor::processIntent(const Intent &intent)
     {
         return life();
     }
-    // if (intent.intent_name == "Change_colour")
-    // {
-    //     return changeColour(intent);
-    // }
 
     return FAILED;
 }
