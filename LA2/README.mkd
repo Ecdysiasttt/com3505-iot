@@ -1,8 +1,300 @@
 
 # COM3505 Lab Assessment 2
+I chose to create Marvin, a DIY Alexa, as my LA2 project. It utilises voice commands in order to perform various functions.
 
-Put your documentation here. 
+I felt like the base setup for Marvin was too simplistic, so to extend the functionality I decided to incorporate an eInk FeatherWing, with the goal of using the screen to display the time and weather, along with useful alerts and potentially integrating Google Calendar functions through the API in order to display upcoming events.
 
-Put your code in [ProjectThing/ProjectThing.ino](ProjectThing/ProjectThing.ino).
+> Note that the entrypoint for the system is /ProjectThing/src/Main.cpp, not ProjectThing.ino. 
 
-See [the rubric](rubric.mkd) for more details.
+## Hardware
+
+![Finished Marvin assembly](photos/marvinFinal.jpg)
+
+This device uses:
+- Adafruit HUZZAH32 ESP32 Feather microcontroller
+- Adafruit 2.13" Monochrome eInk FeatherWing display
+- ICS43434 mic
+- 433 MHz radio transmitter (and wire for aerial)
+- LED for status indication
+
+Due to hardware issues that will be explained later, the following components had to be omitted from the final product:
+- Adafruit MAX98357a amplifier
+- Pimoroni 'Mini Speaker 4Ω (3W)'
+
+## Firmware
+The firmware is built on top of Hamish's fork (https://github.com/hamishcunningham/diy-alexa) of Chris Greening’s original Marvin firmware, and was extended to provide further functionality.
+
+Code that was created or modified is as follows:
+
+---
+
+### Network 
+
+**Files:** [NetworkHelper.h](`ProjectThing/src/NetworkHelper.h`), [NetworkHelper.cpp](`ProjectThing/src/NetworkHelper.cpp`)
+
+**Description:** Upon start-up, Marvin will display a start-up message on the eInk screen and attempt to connect to the previous WiFi network. If this is unsuccessful, it will start an access point and web server in order for the user to select a connection. Once connected, Marvin will check for OTA updates, and perform if necessary - this is largely unaltered code from my LA1 implementation. Relevant messages are displayed to the user throughout using the eInk display.
+
+**Detail:**
+Function **_connectToWifi_**, called during the setup function, first sets the WiFi mode as with LA1, and will make 50 attempts to connect to the previous WiFi network in 5 seconds. If not successful, it will start an access point called 'Marvin-AP' and a corresponding web server, allowing the user to connect to the device and input WiFi credentials. The display will prompt the user to connect to this access point, providing a more user-friendly experience. A `while` loop prevents start-up from continuing until a WiFi connection is established.
+
+Once a connection is established, the display will update, telling the user set-up is continuing. At this point, **_performOTAUpdate_** will run. This function will attempt to connect to http://10.213.65.18:8000/, a python server which runs on my desktop that is connected to the same network as Marvin. This directory contains `version.txt` which contains the latest firmware version as an integer, and `x.bin` - the latest firmware, where `x` is the same value as the firmware version in `version.txt`. If the latest version is greater than the version running on Marvin, it will perform the update and reset.
+
+---
+
+### Display
+
+**Files:** [DisplayHelper.h](`ProjectThing/src/DisplayHelper.h`), [DisplayHelper.cpp](`ProjectThing/src/DisplayHelper.cpp`)
+
+**Description:** The eInk display has many useful functions, and lets Marvin communicate information to the user in a way that a speaker could not easily allow. The default 'home' screen will show the current time and date, as well as weather in a given location, but is also used to display status messages.
+
+**Detail:**
+**Alerts:**
+Function **_displayCentredAlertWithSubtext_** performs all the status message displaying, and was created to provide abstraction for drawing simple alerts to make programming the display more simple. It takes a `header` and `subtext` as arguments, and will display them in the following fashion:
+```
+____________________________
+|                          |
+|          Hello!          | // header
+|     Getting ready...     | // subtext
+|__________________________|
+```
+The default size for a given character is 6x8, but this proved to be too small, so was increased to size 4 for the header (24x32) and 2 for the subtext (12x16). This meant that, due to the size of the screen (250x122), the header could be no longer than 10 characters in length, and the subtext no more than 20 in length.
+
+![Small default text size](photos/marvinSmallText.jpg)
+
+The messages displayed using this function are:
+- **"Hello"**, **"Getting ready..."** - displayed upon start-up
+- **"Connected!"**, **"Continuing setup..."** - displayed after successful WiFi connection is established
+- **"WiFi Error"**, **"Connect to Marvin-AP"** - displayed if WiFi connection is not established
+- **"Updating!"**, **"Do not power off..."** - displayed whilst performing OTA update
+
+![Example of the "Updating", "Do not power off..." alert screen](photos/updatingAlert.jpg)
+
+**Home screen:**
+**_drawHome_** is a more complex function that displays the home screen. As mentioned previously, this shows the time, date, and weather in a specified location.
+
+Due to the variable length of text such as the day or temperature, much trial and error was needed to settle on a layout that prevented text from clipping and being cut off. The final layout is shown below.
+
+To ease laying out the text on this screen, it helped to use relative `x` and `y` coordinates that depended on the values of other pieces of text. For instance, the `y` position for the date (i.e. 16th May) is calculated using the height of the day (i.e. Thursday) that is positioned above it. This allowed me to create a more intuitive, though still crude, method of laying out text in a similar fashion to using CSS's flexbox to position divs in HTML.
+
+Despite these benefits, it quickly proved tedious keeping track of these values for each piece of text (of which there are many). For that reason, helper functions were created.
+
+![Home screen](photos/marvinFinal.jpg)
+
+**Helper functions:**
+A more simple method of positioning text was required. In order to help achieve more simple layout calculations, the functions **_getTextX_** and **_getTextY_** were created.
+
+- **_getTextX_** simply returns the length in pixels that a given string will require. It calculates this by multiplying the standard `x` font dimension by the given font size, and multiplying this by the length of the string.
+- **_getTextY_** returns the number of height in pixels that a given string will require. This only requires the font size, since text length is irrelevant.
+
+> Both of these functions also have the boolean `margin` as an argument, which will add a 2 pixel buffer if applied. In my implementation, `margin` is always used, but the option to omit this was left in.
+
+These functions simplified the process of positioning text as it was now far easier to position text relative to other pieces of text. This enabled the crude 'grouping' of information such as anchoring the `°C` next to the temperature, or the date under the day.
+
+Further abstraction was needed to simplify drawing text. The function **_drawText_** provides this purpose:
+
+```
+void drawText(int16_t x, int16_t y, const char *text, uint16_t color, uint8_t size) {
+	display.setCursor(x,  y);
+	display.setTextColor(color);
+	display.setTextWrap(true);
+	display.setTextSize(size);
+	display.print(text);
+}
+```
+This function performs much of the heavy lifting for drawing text, as this process needs to be repeated every single time text is drawn.
+
+---
+
+### APIs
+**Files:** [DisplayHelper.h](`ProjectThing/src/DisplayHelper.h`), [DisplayHelper.cpp](`ProjectThing/src/DisplayHelper.cpp`)
+
+**Description:** To extend Marvin's usefulness, the screen was added with the intention of turning it into a sort of weather station. Marvin gets the current date and time using an NTP server and the weather through the OpenWeatherMap API.
+
+**Detail:** 
+**Time:**
+The current time is obtained through the function **_getTime_**. This sends a request to an NTP server (https://www.ntppool.org/en/) and parses the response to properly format it for display. This is a somewhat tedious process, since the format chosen requires the suffix of the day ('_st_', '_nd_', '_rd_', or '_th_') to be appended to the day, but is largely trivial.
+
+The loop function in [Main.cpp](`ProjectThing/src/Main.cpp`) will check the time at a given interval, however, the loop can drift if left unchecked. To prevent these circumstances, Marvin will calculate a new offset for this interval using **_adjustPeriod_** - this also has the benefit of aligning the time query with the actual minute itself. For example, if the interval is initially set to 60 seconds, and Marvin first gains the time at 10:23:05, it would not be set to grab the time again until 10:24:05. Marvin will instead calculate that it should obtain the time in 55 seconds instead of 60, thus making the next time query occur at 10:24:00.
+
+Although this adjustment is largely inconsequential for cases like in the example, it prevents Marvin being potentially nearly 2 minutes off. If the time query occurs towards the end of the minute, such as 10:24:58, the period will be adjusted accordingly so that the next query occurs at 10:25:00. This prevents the screen from displaying 10:24 when the time is actually, say, 10:25:40.
+
+Due to limitations with the display, the time is queried every 5 minutes. These limitations will be discussed later.
+
+**Weather:**
+The current weather is obtained through the function **_getWeather_** and utilises the OpenWeatherMap API (https://openweathermap.org/api). This sends a HTTP  request in the form of:
+
+```
+"http://api.openweathermap.org/data/2.5/weather?q=" + location + "&APPID=" + [API key] + "&units=metric"
+```
+
+In our case, `location` is `"Sheffield,GB"`.
+
+The JSON response is large, but it contains many details that can be disregarded for a simple weather station. The fields `["main"]["temp"]`, `["weather"][0]["main"]`, `["sys"]["country"]`, and `["name"]` were used to display the weather to the user. These fields correspond to:
+- Temperature (e.g. 14, in Celsius thanks to `&units=metric`)
+- Description (e.g. Clouds, or Rain)
+- Country (e.g. GB)
+- City (e.g. Sheffield)
+
+Since the weather doesn't change as rapidly as the time does, a weather API call is only made once every 30 minutes.  This, like the time, self-corrects.
+
+## Development
+
+### Basic setup:
+
+![Marvin pre-assembly](photos/marvinStart.jpg)
+
+![Marvin after initial assembly](photos/marvinPrototype.jpg)
+
+To first create Marvin, the hardware setup as shown on the course notes was strictly followed. Since I own a soldering iron and multimeter, I was able to conduct this step at home over the Easter break, since the amplifier and microphone boards both required the pins to be soldered to their boards. The above photos show the result of following these steps.
+
+The provided firmware was then flashed to the ESP32 and worked first try.
+
+### Attaching the eInk display: 
+
+For the eInk FeatherWing to be attached, it was necessary for the ESP32 to be removed from the breadboard, as the eInk needed access to the pins that were currently inserted in the breadboard. This necessitated the use of a number of leads that would allow the microphone and amplifier to function. The pinouts also had to be reconfigured since the eInk required the use of GPIO pins 33, 15, and 32.
+
+![ESP32 broken out from the breadboard](photos/marvinScreenBreakout.jpg)
+
+After scouring the documentation, I was successful in displaying some sample Lorem Ipsum text. Initially though, the wrong screen type was selected. This meant the image did not persist when powered off, and a small black bar was present at the top of the screen. After much investigation, the correct screen type was identified and both of these issues were fixed.
+
+Next I tackled the time and weather API calls, and found a JSON parsing library (ArduinoJson) that would offer substantial help in handling the weather response.
+
+Once this information was obtained, I trialled a handful of display layouts before settling on the final one:
+
+![Home screen trial one](photos/marvinHomeOne.jpg)
+
+This was discarded due to the temperature being difficult to read despite it being one of the most important pieces of information on the screen. Increasing the size meant the layout had to be adjusted.
+
+![Home screen trial two](photos/marvinHomeTwo.jpg)
+
+This was far more readable than the first layout, allowing the user to quickly read the most important information at a glance. However, the date being located under the time left jarring white spaces in the screen that I personally didn't enjoy looking at.
+
+![Final home screen layout](photos/marvinFinal.jpg)
+
+In the final design, the weather layout actually remained unchanged. The date being in the corner felt much more aesthetically pleasing to me, and so this was finalised. Further, the longest possible date (Saturday, XXth MMM) fit snugly in the space provided. Conveniently, Sheffield is just short enough to allow a 2-digit temperature to be displayed, and since temperatures over 99°C or below -9°C are unlikely to occur in Sheffield, all reasonable temperatures can be displayed without clipping.
+
+- (It should be noted, however, that a longer place name would necessitate additional logic to dynamically adjust the font size, introduce line breaks, omit the country code, or some combination of the three)
+
+### Radio Transmitter 
+After the screen was finalised, the radio transmitter was added in order to enable Marvin to control a radio plug, providing some proto-"smart home" functionality. An aerial was crudely made from two pieces of wire that were too short to meet the 25cm requirement listed on the tutorial (https://github.com/hamishcunningham/fishy-wifi/blob/master/build_doc/How-to-make-a-Air-Cooled-433MHz-antenna.pdf). Since my soldering iron had broken in the period since Marvin's initial assembly, the two pieces of wire had to be attached through bending loops into the ends of each wire and pressing them shut as tightly as possible. The tip of the aerial is not rigidly fixed, but is permanently making a connection to the larger part of the aerial .
+
+To initialise the plug, I wrote a method in the setup function in [Main.cpp](`ProjectThing/src/Main.cpp`) that would repeatedly broadcast the signal below (as provided by Hamish in the course notes) for 5 seconds.
+
+| Ref | 1 ON | 1  OFF |
+| ------------- |:-------------:| :-------------:|
+| 1401    | 1398067     |1398076  |
+
+Then, to test the plug had been initialised correctly, I created an on/off toggle in the loop function of [Main.cpp](`ProjectThing/src/Main.cpp`) that would trigger every 5 seconds. This also allowed me to test the range by moving the device knowing it would continually broadcast signals. Without the aerial, the range was hardly more than 1ft, and though temperamental even _with_ the aerial, it was extended to the order of a couple of metres.
+
+### Wit<span>.</span>AI
+I had to create a Wit<span>.</span>AI project in order to obtain a server access token to allow Marvin to broadcast commands for processing.
+
+I set this project up to recognise the following commands:
+- 'Turn the [device] on/off' - will turn on or off the stated device (i.e. the plug).
+- 'Show me my calendar' - would've linked with the Google Calendar API, see limitations for more.
+- 'Tell me a joke' - to access the jokeX.wav files present in the file structure.
+- 'That's life' - to access life.wav present in the file structure.
+- 'Check for updates' - perform OTA update if the firmware is outdated.
+
+### Finalising Hardware Setup
+
+After ensuring all the hardware was functional, the hardware setup was finalised. To make the setup more robust, I theorised a method that would enable the ESP32 to be plugged into the breadboard while still having the eInk attached.
+
+
+![Final marvin breadboard](photos/marvinFinalBreadboardPrototype.jpg)
+
+
+This involved using excess header pins, alternating between pushing one up into the ESP32 headers and the next down into the breadboard, thus allowing the headers to act as anchors. By adjusting the pinouts, large sections of these anchors could be used to secure the ESP32 into the breadboard. Stripped wire could then be cut to size such that it made contact with both the ESP32 and the breadboard, allowing components to be attached as normal.
+
+Though fiddly (especially when inserting the ESP32), this meant I could remove the leads entirely and instead use trimmed wires to neatly connect components.
+
+![breadboard before inserting ESP32](photos/marvinFinalBreadboard.jpg)
+
+![after inserting ESP32](photos/marvinFinalBreadboardTwo.jpg)
+
+![Final layout](photos/marvinFinal.jpg)
+
+## Difficulties and Limitations
+
+### Speaker:
+In the initial hardware setup (such that my hardware was identical to that of the guide), the speaker was completely functional. `ready.wav` and `cantdo.wav` would play exactly as they sound on desktop.
+
+However, after attaching the eInk, the speaker began acting differently. The speaker would alternate being deafeningly loud and distorted, to being completely unresponsive, to playing strange bleeps before audio clips, to popping at random times. The extent of this was so great that at one point the speaker could be observed moving on its own.
+
+Myriad attempts were made to diagnose this issue, all of which were completely fruitless. Firstly, I removed the eInk and recreated the initial hardware setup. I then tried a larger gain resistor, then a smaller gain resistor. I used my multimeter to check for continuity across all the amp and speaker connections along with checking that the voltage was as expected. I tried different output pins, an entirely new amp board from a known-working Marvin, an entirely new speaker also from a known-working Marvin, even a third brand new speaker. I even resorted to contacting Hamish for help, since I simply could not find the issue despite trying everything my years of tinkering with electronics taught me how.
+
+Ultimately, nothing worked. After attaching the eInk for the first time, any form of audio output was permanently loud and distorted, or utterly non-functional.
+
+This unfortunately limited Marvin's usefulness, so the speaker was replaced with an LED to indicate when Marvin was listening and responding to commands. Vocal responses such as `jokeX.wav` and `life.wav` were locked behind this solution, but it still allows the user to get feedback from Marvin without having to look at the terminal.
+
+### Wake Word Detection:
+
+Although the wake word detection was never great, right at the end of the project, after moving the hardware to its permanent layout on the breadboard, it became particularly temperamental.
+
+At the project's outset, Marvin would usually respond on the second or third attempt, however towards the end of the project I could find myself repeating "Marvin" as many as 15 times with various intonations and accents before it would recognise the wake word. This was consistent even with the threshold `output` in [DetectWakeWordState.cpp](`ProjectThing/src/state_machine/DetectWakeWordState.cpp`) reduced from 0.95 to 0.85. I quickly grew sick of hearing myself say the word Marvin.
+
+This could be down to multiple issues. Firstly the model, which I could improve by making my own. Since Chris Greening (Marvin's original creator) has a very different accent to myself, using clips of my own voice could help improve the wake word recognition. I did attempt to create my own model using the original audio clips and jupyter notebook provided in the fork, but this was a lengthy process and the repeated timeouts and errors became too time consuming for me to justify continuing.
+
+I suspect that the microphone also has some part to play in this inconsistency. This is due to the fact that once I began printing the value of `output` to the terminal, I noticed that, at times, it was permanently 0.21, telling me something was wrong. After reseating all the connections (which at this point was tedious due to the `SCK` connection running underneath the ESP32), it would work, but then quickly broke again. After going in circles with this process, eventually reseating the connections stopped working, and I'd simply lost the patience to rearrange the breadboard so that the microphone could be tested in a different position.
+
+### Display:
+The eInk display added substantial complexity to the project.
+
+Firstly, connectivity was difficult due to the FeatherWing requiring access to the ESP32 pins that would otherwise be placed inside the breadboard. Secondly, the documentation was poor, meaning I had to resort to analysing examples provided in the library to ascertain how the display worked. Though I feel like this limited the usability, since there may be extremely powerful features that I missed due to poor documentation, I am still extremely satisfied with the final result of the screen.
+
+One limitation, however, is that Adafruit recommends that their eInk panels are not refreshed more regularly than once every three minutes. For a clock, that severely limits the usefulness. I ultimately settled on refreshing once every 5 minutes, but there are workarounds:
+
+Firstly, a different display type could be used. An LCD screen, such as one found in the unPhone, doesn't have this restriction. LCD panels, however, are substantially more power hungry than eInk panels (which only use power when changing the display). I also feel like they're harsher on the eyes, though that's entirely personal preference.
+
+Secondly, an eInk panel that supports partial refreshes could be used - these are available from Adafruit in a FeatherWing form factor. A panel that supports this feature would allow only a given section of the display to refresh. This means the clock portion of the display could be set to refresh every minute, with the whole panel refreshing every 30 minutes with the weather in order to reduce ghosting effects that occur with frequent partial refreshes.
+
+If development were to continue, I would certainly choose the second option. Partly because I think eInk is really cool, but also because it's less power intensive and visually more appealing.
+
+Briefly, I mentioned the Google Calendar API at the start. It was hoped that I could use voice commands to switch the display, with the intent of saying commands like "Show me my calendar", to which Marvin would call the API to retrieve events for the day. Unfortunately, implementing this in c++ seems to be difficult. Google no longer supports their c++ API library, and the only workaround I saw required the use of a library called 'chilkat', which requires payment in order to function.
+
+### Case:
+
+I designed a case for Marvin in Fusion 360 that could be 3D printed. An initial version was a fully enclosed design, however this was modified to be an open case to simplify the printing, along with displaying the hardware, which I personally prefer.
+
+ It would display the screen at a slight angle, and provide a base large enough for the matrix board provided with the course kit to be mounted to it. I attempted to print this three times using the iForge, however it was full each time I visited, so was unfortunately unable to do so.
+
+![Case designed for Marvin](photos/case.jpg)
+
+## Video
+Since Marvin currently has no interactive functionality, I have decided to instead attach a video showing the previous working setup, along with examples of the broken speaker to illustrate the issue more clearly.
+
+**I must stress that you check your volume before watching.**
+
+https://www.youtube.com/shorts/04j0iUu_lQ4
+
+## Testing
+As with LA1, I adopted a TDD approach to my development. 
+
+Though testing has been covered throughout this README, I wanted to highlight a few aspects where I showcased rigorous testing procedures.
+
+Firstly, diagnosing the hardware issues with the speaker. I did the simplest things first, since although it's unlikely to be the most simple solution, it would save a lot of pain if it was. This meant the first thing I did was check for continuity across all connections, since this would be the quickest fix. I then checked the voltages with my multimeter. At times when the speaker wasn't playing audio, I would watch the voltages on the data pin fluctuate to verify it was connected properly. The diagnosis grew more and more complex as the issue remained unsolved, but this is good practice as it eliminates easy mistakes early on and saves wasted effort. I only contacted the lecturer once I'd exhausted every avenue I could think of and recognised the issue was clearly larger than one I could solve on my own.
+
+When creating intents on Wit<span>.</span>AI, I used many different variations in order to thoroughly cover all bases. For instance, for the intent 'turn [device] on/off', the application was trained with phrases like:
+- "Turn the plug on" 
+- "Turn on the plug"
+- "Plug on"
+- "On the plug"
+- "On plug"
+- Turn plug on"
+- ...
+
+and likewise for 'off' states.
+
+## Self Assessment
+
+Despite all the headaches and setbacks, I enjoyed this project on the whole.
+
+I'd looked forward to this module every since I learned it existed. Going back far too many years now, I remember my most enjoyable GCSE was Electronics. In the years since, I've developed a hobby tinkering with retro gadgets, fixing up old Gameboys and the like (hence owning a soldering iron and multimeter). I even own an Arduino Uno that I was bought as a present many years ago, though in fairness this saw limited use.
+
+Being able to apply the coding knowledge I've learned on my degree to what essentially amounts to one of my favourite hobbies was a dream come true. So regardless of my Marvin's usefulness as a home assistant, I don't regret any decision I took.
+
+Being more critical of the device itself, I wish I reduced the scope. What I've created is essentially now essentially just a weather station, but I think if I had been more strict at the outset and settled on a project that revolved entirely around the screen (and didn't include any voice recognition features), I could've created a more comprehensive device. Perhaps a touch button could've been incorporated to change the display to further extend the usefulness. I'd envisioned this grand dream of a Marvin that could flawlessly do so many things (I even imagined adding an IR sensor to control a TV), which I think increased my frustration when things didn't work, since I'd expected so much more from myself.
+
+If I continued development, I would like to fix the speaker and microphone issues. Though I'm not entirely sure how this might be done, since I can't even pinpoint the issue, I would likely start fresh with a new ESP32. I would also like to replace the eInk panel with one that supports partial refreshes, allowing the clock to update every minute without degrading the entire display. Finally, creating a case would make Marvin feel more finished.
+
+I also wish I paced myself better. I was eager to begin work on this project and so I'd built Marvin the day after submitting LA1. Within 2 days I'd gone from the LA1 setup to having a functional Marvin, to having a working eInk weather station attached. After that though, there was a lull due to the Easter break and other commitments (particularly my dissertation swallowing weeks of development time). Pacing myself better would've given me more time to better implement features like the radio transmitter, along with potentially providing time for hardware issues to be fixed.
